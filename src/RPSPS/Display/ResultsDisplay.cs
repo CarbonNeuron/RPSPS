@@ -1,6 +1,7 @@
 namespace RPSPS.Display;
 
 using RPSPS.Engine;
+using RPSPS.Update;
 using Spectre.Console;
 
 public static class ResultsDisplay
@@ -20,7 +21,7 @@ public static class ResultsDisplay
             > 10_000 => "bold yellow",
             _ => "bold red"
         };
-        AnsiConsole.Write(new Rule("[bold magenta]Results[/]").RuleStyle("magenta"));
+        AnsiConsole.Write(new Rule("[bold magenta]:bar_chart: Results[/]").RuleStyle("magenta"));
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine($"  [{heroColor}]{rpsps:N0}[/] [dim]tournaments/sec[/]");
         AnsiConsole.WriteLine();
@@ -35,7 +36,7 @@ public static class ResultsDisplay
         AnsiConsole.WriteLine();
 
         // ── Memory section ──
-        AnsiConsole.Write(new Rule("[bold yellow]Memory[/]").RuleStyle("yellow"));
+        AnsiConsole.Write(new Rule("[bold yellow]:floppy_disk: Memory[/]").RuleStyle("yellow"));
         AnsiConsole.WriteLine();
 
         WriteMetric("orange1", "Peak Working Set", FormatBytes(result.PeakWorkingSetBytes));
@@ -52,14 +53,14 @@ public static class ResultsDisplay
         AnsiConsole.WriteLine();
 
         // ── Player leaderboard ──
-        AnsiConsole.Write(new Rule("[bold green]Leaderboard[/]").RuleStyle("green"));
+        AnsiConsole.Write(new Rule("[bold green]:trophy: Leaderboard[/]").RuleStyle("green"));
         AnsiConsole.WriteLine();
 
         var sorted = result.PlayerStats
             .OrderByDescending(p => p.Value.WinRate)
             .ToList();
 
-        string[] medals = ["\U0001f947", "\U0001f948", "\U0001f949", "  "];
+        string[] medals = [":1st_place_medal:", ":2nd_place_medal:", ":3rd_place_medal:", "  "];
         var barWidth = 30;
 
         for (int i = 0; i < sorted.Count; i++)
@@ -85,7 +86,7 @@ public static class ResultsDisplay
         AnsiConsole.WriteLine();
         AnsiConsole.Write(new FigletText("RPSPS")
             .Color(Color.Fuchsia));
-        AnsiConsole.MarkupLine("  [dim italic]Rock Paper Scissors Per Second[/]  [grey]v1.0[/]");
+        AnsiConsole.MarkupLine($"  [dim italic]Rock Paper Scissors Per Second[/]  [grey]v{Updater.CurrentVersion}[/]");
         AnsiConsole.WriteLine();
         AnsiConsole.Write(new Rule().RuleStyle("fuchsia"));
         AnsiConsole.WriteLine();
@@ -93,16 +94,16 @@ public static class ResultsDisplay
 
     public static void ShowConfiguration(int threads, double duration, int? seed)
     {
-        AnsiConsole.MarkupLine("[bold fuchsia]Configuration[/]");
-        AnsiConsole.MarkupLine($"  [dim]\u2502[/] Threads   [bold cyan]{threads}[/]");
-        AnsiConsole.MarkupLine($"  [dim]\u2502[/] Duration  [bold cyan]{duration}s[/]");
-        AnsiConsole.MarkupLine($"  [dim]\u2502[/] Seed      [bold cyan]{seed?.ToString() ?? "random"}[/]");
+        AnsiConsole.MarkupLine("[bold fuchsia]:gear: Configuration[/]");
+        WriteMetric("cyan", "Threads", threads.ToString());
+        WriteMetric("cyan", "Duration", $"{duration}s");
+        WriteMetric("cyan", "Seed", seed?.ToString() ?? "random");
         AnsiConsole.WriteLine();
     }
 
     private static void WriteMetric(string color, string label, string value)
     {
-        AnsiConsole.MarkupLine($"  [dim]\u2502[/] {label,-20} [{color} bold]{value}[/]");
+        AnsiConsole.MarkupLine($"  [dim]|[/] {label,-20} [{color} bold]{value}[/]");
     }
 
     private static string FormatBytes(long bytes)

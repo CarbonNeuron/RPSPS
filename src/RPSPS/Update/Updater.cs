@@ -2,6 +2,7 @@ namespace RPSPS.Update;
 
 using System.Diagnostics;
 using System.Net.Http.Json;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using Spectre.Console;
@@ -10,7 +11,12 @@ public static class Updater
 {
     private const string GitHubOwner = "CarbonNeuron";
     private const string GitHubRepo = "RPSPS";
-    public const string CurrentVersion = "1.1.0";
+
+    public static string CurrentVersion { get; } =
+        typeof(Updater).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion.Split('+')[0] // strip build metadata
+        ?? typeof(Updater).Assembly.GetName().Version?.ToString(3)
+        ?? "0.0.0";
 
     public static async Task<int> RunAsync(CancellationToken cancellationToken)
     {
