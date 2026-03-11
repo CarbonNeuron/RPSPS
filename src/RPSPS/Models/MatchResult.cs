@@ -8,15 +8,17 @@ public sealed class MatchResult
     public int AwayWins { get; }
     public int Draws { get; }
     public int RoundCount { get; }
+    public List<Round> Rounds { get; }
     public string WinnerName => HomeWins > AwayWins ? HomePlayerName : AwayPlayerName;
 
-    public MatchResult(string homePlayerName, string awayPlayerName, int homeWins, int awayWins, int draws, int roundCount)
+    public MatchResult(string homePlayerName, string awayPlayerName, int homeWins, int awayWins, int draws, List<Round> rounds)
     {
         HomePlayerName = homePlayerName;
         AwayPlayerName = awayPlayerName;
         HomeWins = homeWins;
         AwayWins = awayWins;
         Draws = draws;
-        RoundCount = roundCount;
+        Rounds = rounds;
+        RoundCount = rounds.Count;
     }
 }

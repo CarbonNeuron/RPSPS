@@ -6,27 +6,20 @@ public abstract class Player
 {
     public abstract string Name { get; }
 
-    // Pre-allocated history buffer — matches are short (typically <10 rounds)
-    private Move[] _opponentHistory = new Move[16];
-    private int _opponentHistoryCount;
+    private readonly List<Move> _opponentHistory = new();
 
     public abstract Move ChooseMove();
 
+    public abstract Player Clone();
+
     public void RecordOpponentMove(Move move)
     {
-        if (_opponentHistoryCount == _opponentHistory.Length)
-            Array.Resize(ref _opponentHistory, _opponentHistory.Length * 2);
-        _opponentHistory[_opponentHistoryCount++] = move;
+        _opponentHistory.Add(move);
         OnOpponentMove(move);
     }
 
     protected virtual void OnOpponentMove(Move move) { }
 
-    protected ReadOnlySpan<Move> OpponentHistory => _opponentHistory.AsSpan(0, _opponentHistoryCount);
-    protected int OpponentHistoryCount => _opponentHistoryCount;
-
-    public virtual void Reset()
-    {
-        _opponentHistoryCount = 0;
-    }
+    protected IReadOnlyList<Move> OpponentHistory => _opponentHistory;
+    protected int OpponentHistoryCount => _opponentHistory.Count;
 }

@@ -6,39 +6,48 @@ public sealed class Match
 {
     private const int WinsNeeded = 3;
 
-    public static MatchResult Play(Player home, Player away)
-    {
-        int homeWins = 0, awayWins = 0, draws = 0, roundCount = 0;
+    public Player Home { get; }
+    public Player Away { get; }
+    public List<Round> Rounds { get; } = new();
 
-        home.Reset();
-        away.Reset();
+    public Match(Player home, Player away)
+    {
+        Home = home;
+        Away = away;
+    }
+
+    public MatchResult Play()
+    {
+        int homeWins = 0, awayWins = 0, draws = 0;
 
         while (homeWins < WinsNeeded && awayWins < WinsNeeded)
         {
-            var homeMove = home.ChooseMove();
-            var awayMove = away.ChooseMove();
+            var homeMove = Home.ChooseMove();
+            var awayMove = Away.ChooseMove();
 
-            roundCount++;
+            var round = new Round(homeMove, awayMove);
+            Rounds.Add(round);
 
-            // Inline resolution — avoid Round allocation in hot path
-            if (homeMove == awayMove)
+            switch (round.Result)
             {
-                draws++;
-            }
-            else if (homeMove.Beats(awayMove))
-            {
-                homeWins++;
-            }
-            else
-            {
-                awayWins++;
+                case RoundResult.Draw:
+                    draws++;
+                    break;
+                case RoundResult.HomeWin:
+                    homeWins++;
+                    break;
+                case RoundResult.AwayWin:
+                    awayWins++;
+                    break;
             }
 
-            // Record opponent moves for strategy tracking
-            home.RecordOpponentMove(awayMove);
-            away.RecordOpponentMove(homeMove);
+            Home.RecordOpponentMove(awayMove);
+            Away.RecordOpponentMove(homeMove);
         }
 
-        return new MatchResult(home.Name, away.Name, homeWins, awayWins, draws, roundCount);
+        return new MatchResult(Home.Name, Away.Name, homeWins, awayWins, draws, Rounds);
     }
+
+    // Convenience for callers that don't need the Match instance
+    public static MatchResult Play(Player home, Player away) => new Match(home, away).Play();
 }

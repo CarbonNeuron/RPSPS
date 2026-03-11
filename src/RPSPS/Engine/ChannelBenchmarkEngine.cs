@@ -13,25 +13,12 @@ public sealed class ChannelBenchmarkEngine : BenchmarkEngineBase
     {
     }
 
-    private readonly struct ChannelItem
-    {
-        public readonly int MatchCount;
-        public readonly int TotalRounds;
-        public readonly PlayerStanding[] Standings;
-
-        public ChannelItem(TournamentResult result)
-        {
-            MatchCount = result.MatchCount;
-            TotalRounds = result.TotalRounds;
-            Standings = result.Standings;
-        }
-    }
-
     protected override void RunCore(int[] threadSeeds, ThreadCounters[] counters,
         long startTimestamp, long endTimestamp,
         ProgressCallback? onProgress, CancellationToken cancellationToken)
     {
-        var channel = Channel.CreateBounded<ChannelItem>(new BoundedChannelOptions(1024)
+        // Send full TournamentResult objects through the channel — real object graph pressure
+        var channel = Channel.CreateBounded<TournamentResult>(new BoundedChannelOptions(1024)
         {
             FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true,
@@ -55,11 +42,10 @@ public sealed class ChannelBenchmarkEngine : BenchmarkEngineBase
                 while (Stopwatch.GetTimestamp() < endTimestamp && !cts.Token.IsCancellationRequested)
                 {
                     var result = runner.RunTournament(iteration++);
-                    var item = new ChannelItem(result);
 
                     try
                     {
-                        await channel.Writer.WriteAsync(item, cts.Token);
+                        await channel.Writer.WriteAsync(result, cts.Token);
                     }
                     catch (OperationCanceledException)
                     {
@@ -77,13 +63,13 @@ public sealed class ChannelBenchmarkEngine : BenchmarkEngineBase
 
             try
             {
-                await foreach (var item in reader.ReadAllAsync(cts.Token))
+                await foreach (var result in reader.ReadAllAsync(cts.Token))
                 {
                     counters[0].Tournaments++;
-                    counters[0].Matches += item.MatchCount;
-                    counters[0].Rounds += item.TotalRounds;
+                    counters[0].Matches += result.MatchCount;
+                    counters[0].Rounds += result.TotalRounds;
 
-                    var standings = item.Standings;
+                    var standings = result.Standings;
                     for (int i = 0; i < standings.Length; i++)
                     {
                         playerStats[i].Wins += standings[i].Wins;

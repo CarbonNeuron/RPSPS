@@ -31,15 +31,15 @@ public class FrequencyPlayerTests
     }
 
     [Fact]
-    public void Reset_ClearsFrequencies()
+    public void Clone_ProducesFreshPlayer()
     {
         var player = new FrequencyPlayer(42);
         player.RecordOpponentMove(Move.Rock);
         player.RecordOpponentMove(Move.Rock);
-        player.Reset();
 
-        // After reset with empty history, should return random
-        var move = player.ChooseMove();
-        move.Should().BeOneOf(Move.Rock, Move.Paper, Move.Scissors);
+        var clone = (FrequencyPlayer)player.Clone();
+
+        // Clone has no history — falls back to random
+        clone.ChooseMove().Should().BeOneOf(Move.Rock, Move.Paper, Move.Scissors);
     }
 }

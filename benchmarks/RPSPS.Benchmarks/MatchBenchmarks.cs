@@ -19,5 +19,9 @@ public class MatchBenchmarks
 
     [Benchmark]
     [ArgumentsSource(nameof(PlayerPairings))]
-    public MatchResult PlayMatch(string name, Player home, Player away) => Match.Play(home, away);
+    public MatchResult PlayMatch(string name, Player home, Player away)
+    {
+        var match = new Match(home.Clone(), away.Clone());
+        return match.Play();
+    }
 }

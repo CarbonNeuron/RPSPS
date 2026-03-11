@@ -6,12 +6,14 @@ public sealed class TournamentResult
 {
     public int MatchCount { get; }
     public int TotalRounds { get; }
+    public List<MatchResult> MatchResults { get; }
     public PlayerStanding[] Standings { get; }
 
-    public TournamentResult(int matchCount, int totalRounds, PlayerStanding[] standings)
+    public TournamentResult(int matchCount, int totalRounds, List<MatchResult> matchResults, PlayerStanding[] standings)
     {
         MatchCount = matchCount;
         TotalRounds = totalRounds;
+        MatchResults = matchResults;
         Standings = standings;
     }
 }
@@ -40,15 +42,20 @@ public sealed class Tournament
         for (int i = 0; i < players.Length; i++)
             standings[i] = new PlayerStanding(players[i].Name);
 
-        int matchCount = 0;
+        var matchResults = new List<MatchResult>();
         int totalRounds = 0;
 
         for (int i = 0; i < players.Length; i++)
         {
             for (int j = i + 1; j < players.Length; j++)
             {
-                var result = Match.Play(players[i], players[j]);
-                matchCount++;
+                // Fresh player clones per match — no history leaks
+                var home = players[i].Clone();
+                var away = players[j].Clone();
+
+                var match = new Match(home, away);
+                var result = match.Play();
+                matchResults.Add(result);
                 totalRounds += result.RoundCount;
 
                 if (result.HomeWins > result.AwayWins)
@@ -69,6 +76,6 @@ public sealed class Tournament
             }
         }
 
-        return new TournamentResult(matchCount, totalRounds, standings);
+        return new TournamentResult(matchResults.Count, totalRounds, matchResults, standings);
     }
 }

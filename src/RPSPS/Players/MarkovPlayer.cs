@@ -53,10 +53,5 @@ public sealed class MarkovPlayer : Player
         _lastOpponentMove = (int)move;
     }
 
-    public override void Reset()
-    {
-        base.Reset();
-        Array.Clear(_transitions);
-        _lastOpponentMove = -1;
-    }
+    public override Player Clone() => new MarkovPlayer(_rng.Next(), _moveCount);
 }

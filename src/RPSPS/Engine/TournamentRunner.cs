@@ -5,18 +5,21 @@ using RPSPS.Players;
 
 public sealed class TournamentRunner
 {
-    private readonly int _baseSeed;
-    private readonly Player[] _players;
+    private readonly Player[] _templatePlayers;
 
     public TournamentRunner(int baseSeed, GameMode gameMode = GameMode.Classic)
     {
-        _baseSeed = baseSeed;
-        _players = CreatePlayers(baseSeed, gameMode);
+        _templatePlayers = CreatePlayers(baseSeed, gameMode);
     }
 
     public TournamentResult RunTournament(int iteration)
     {
-        return Tournament.Run(_players);
+        // Fresh player instances each tournament — cloned from templates
+        var players = new Player[_templatePlayers.Length];
+        for (int i = 0; i < _templatePlayers.Length; i++)
+            players[i] = _templatePlayers[i].Clone();
+
+        return Tournament.Run(players);
     }
 
     public static Player[] CreatePlayers(int seed, GameMode gameMode = GameMode.Classic)

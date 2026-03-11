@@ -19,4 +19,6 @@ public sealed class RandomPlayer : Player
     {
         return (Move)_rng.Next(_moveCount);
     }
+
+    public override Player Clone() => new RandomPlayer(_rng.Next(), _moveCount);
 }

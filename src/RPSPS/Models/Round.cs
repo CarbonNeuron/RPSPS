@@ -1,6 +1,6 @@
 namespace RPSPS.Models;
 
-public readonly struct Round
+public sealed class Round
 {
     public Move HomeMove { get; }
     public Move AwayMove { get; }

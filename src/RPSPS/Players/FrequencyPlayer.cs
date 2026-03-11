@@ -43,9 +43,5 @@ public sealed class FrequencyPlayer : Player
         _frequency[(int)move]++;
     }
 
-    public override void Reset()
-    {
-        base.Reset();
-        Array.Clear(_frequency);
-    }
+    public override Player Clone() => new FrequencyPlayer(_rng.Next(), _moveCount);
 }

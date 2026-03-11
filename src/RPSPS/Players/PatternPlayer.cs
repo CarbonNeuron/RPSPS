@@ -20,16 +20,16 @@ public sealed class PatternPlayer : Player
     public override Move ChooseMove()
     {
         var history = OpponentHistory;
-        if (history.Length < _windowSize * 2)
+        if (history.Count < _windowSize * 2)
             return (Move)_rng.Next(_moveCount);
 
         // Look for repeating pattern in the last windowSize moves
-        int start = history.Length - _windowSize;
+        int start = history.Count - _windowSize;
         for (int patternLen = 1; patternLen <= _windowSize / 2; patternLen++)
         {
             bool isPattern = true;
 
-            for (int i = start; i < history.Length; i++)
+            for (int i = start; i < history.Count; i++)
             {
                 if (history[i] != history[start + (i - start) % patternLen])
                 {
@@ -40,7 +40,7 @@ public sealed class PatternPlayer : Player
 
             if (isPattern)
             {
-                int nextIdx = (history.Length - start) % patternLen;
+                int nextIdx = (history.Count - start) % patternLen;
                 Move predicted = history[start + nextIdx];
                 return _moveCount > 3 ? predicted.GetCounter(_rng) : predicted.GetCounter();
             }
@@ -48,4 +48,6 @@ public sealed class PatternPlayer : Player
 
         return (Move)_rng.Next(_moveCount);
     }
+
+    public override Player Clone() => new PatternPlayer(_rng.Next(), _moveCount, _windowSize);
 }

@@ -26,8 +26,6 @@ public class MarkovPlayerTests
         }
 
         // After Rock, opponent should play Scissors
-        // Last move recorded was Scissors, so predict what follows Scissors
-        // But we want to test after Rock -> Scissors transition
         // Record one more Rock so last move is Rock
         player.RecordOpponentMove(Move.Rock);
 
@@ -37,15 +35,16 @@ public class MarkovPlayerTests
     }
 
     [Fact]
-    public void Reset_ClearsTransitionMatrix()
+    public void Clone_ProducesFreshPlayer()
     {
         var player = new MarkovPlayer(42);
         for (int i = 0; i < 10; i++)
             player.RecordOpponentMove(Move.Rock);
 
-        player.Reset();
+        var clone = (MarkovPlayer)player.Clone();
 
-        var move = player.ChooseMove();
+        // Clone has no history — falls back to random
+        var move = clone.ChooseMove();
         move.Should().BeOneOf(Move.Rock, Move.Paper, Move.Scissors);
     }
 
@@ -59,10 +58,7 @@ public class MarkovPlayerTests
         player1.RecordOpponentMove(Move.Rock);
 
         // player2 has no history, its ChooseMove should be independent of player1
-        // player2 with seed 42 and no history returns a random move (not forced to Rock counter)
-        var move1 = player1.ChooseMove();
         var move2 = player2.ChooseMove();
-        // player2 had no recorded moves so it falls back to random; both are valid moves
         move2.Should().BeOneOf(Move.Rock, Move.Paper, Move.Scissors);
     }
 }
