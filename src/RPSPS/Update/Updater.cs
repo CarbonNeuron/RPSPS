@@ -10,7 +10,7 @@ public static class Updater
 {
     private const string GitHubOwner = "CarbonNeuron";
     private const string GitHubRepo = "RPSPS";
-    public const string CurrentVersion = "1.0.0";
+    public const string CurrentVersion = "1.1.0";
 
     public static async Task<int> RunAsync(CancellationToken cancellationToken)
     {
