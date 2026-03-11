@@ -1,10 +1,15 @@
+using System.Text;
 using RPSPS.Display;
 using RPSPS.Engine;
+using RPSPS.Update;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+
+Console.OutputEncoding = Encoding.UTF8;
+Console.InputEncoding = Encoding.UTF8;
 
 return EntryPoint.Main(args);
 
@@ -13,6 +18,7 @@ internal static class EntryPoint
     // Preserve types that Spectre.Console.Cli discovers via reflection at runtime
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(BenchmarkCommand))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(BenchmarkSettings))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(UpdateCommand))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, "Spectre.Console.Cli.EmptyCommandSettings", "Spectre.Console.Cli")]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, "Spectre.Console.Cli.ExplainCommand", "Spectre.Console.Cli")]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, "Spectre.Console.Cli.ExplainCommand+Settings", "Spectre.Console.Cli")]
@@ -29,7 +35,9 @@ internal static class EntryPoint
         app.Configure(config =>
         {
             config.SetApplicationName("rpsps");
-            config.SetApplicationVersion("1.0.0");
+            config.SetApplicationVersion(Updater.CurrentVersion);
+            config.AddCommand<UpdateCommand>("update")
+                .WithDescription("Check for updates and install the latest version");
         });
         return app.Run(args);
     }
@@ -136,5 +144,13 @@ internal sealed class BenchmarkCommand : Command<BenchmarkSettings>
         }
 
         return 0;
+    }
+}
+
+internal sealed class UpdateCommand : AsyncCommand<EmptyCommandSettings>
+{
+    public override async Task<int> ExecuteAsync(CommandContext context, EmptyCommandSettings settings, CancellationToken cancellation)
+    {
+        return await Updater.RunAsync(cancellation);
     }
 }
