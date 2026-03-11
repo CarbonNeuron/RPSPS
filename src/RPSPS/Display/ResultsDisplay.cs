@@ -1,6 +1,7 @@
 namespace RPSPS.Display;
 
 using RPSPS.Engine;
+using RPSPS.Models;
 using RPSPS.Update;
 using Spectre.Console;
 
@@ -12,7 +13,7 @@ public static class ResultsDisplay
     {
         AnsiConsole.WriteLine();
 
-        // ── Big hero number ──
+        // -- Big hero number --
         var rpsps = result.TournamentsPerSecond;
         var heroColor = rpsps switch
         {
@@ -26,7 +27,7 @@ public static class ResultsDisplay
         AnsiConsole.MarkupLine($"  [{heroColor}]{rpsps:N0}[/] [dim]tournaments/sec[/]");
         AnsiConsole.WriteLine();
 
-        // ── Throughput metrics as colored key-value lines ──
+        // -- Throughput metrics --
         WriteMetric("fuchsia", "Tournaments", result.TotalTournaments.ToString("N0"));
         WriteMetric("cyan", "Total Matches", result.TotalMatches.ToString("N0"));
         WriteMetric("cyan", "Total Rounds", result.TotalRounds.ToString("N0"));
@@ -35,7 +36,7 @@ public static class ResultsDisplay
         WriteMetric("grey", "Duration", $"{result.ActualDurationSeconds:F2}s");
         AnsiConsole.WriteLine();
 
-        // ── Memory section ──
+        // -- Memory section --
         AnsiConsole.Write(new Rule("[bold yellow]:floppy_disk: Memory[/]").RuleStyle("yellow"));
         AnsiConsole.WriteLine();
 
@@ -52,7 +53,7 @@ public static class ResultsDisplay
         WriteMetric(gcColor2, "GC Gen2", result.GcGen2Collections.ToString("N0"));
         AnsiConsole.WriteLine();
 
-        // ── Player leaderboard ──
+        // -- Player leaderboard --
         AnsiConsole.Write(new Rule("[bold green]:trophy: Leaderboard[/]").RuleStyle("green"));
         AnsiConsole.WriteLine();
 
@@ -81,6 +82,41 @@ public static class ResultsDisplay
         AnsiConsole.Write(new Rule().RuleStyle("dim"));
     }
 
+    public static void ShowComparisonResults(Dictionary<ConcurrencyMode, BenchmarkResult> results, int threads, GameMode gameMode, double duration)
+    {
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(new Rule($"[bold magenta]:bar_chart: Concurrency Comparison ({threads} threads, {gameMode.DisplayName().ToLowerInvariant()}, {duration}s each)[/]").RuleStyle("magenta"));
+        AnsiConsole.WriteLine();
+
+        var table = new Table();
+        table.Border(TableBorder.Rounded);
+        table.AddColumn(new TableColumn("[bold]Mode[/]").Centered());
+        table.AddColumn(new TableColumn("[bold]RPSPS[/]").RightAligned());
+        table.AddColumn(new TableColumn("[bold]Rounds/sec[/]").RightAligned());
+        table.AddColumn(new TableColumn("[bold]vs Best[/]").RightAligned());
+
+        double bestRpsps = results.Values.Max(r => r.TournamentsPerSecond);
+
+        foreach (var mode in BenchmarkEngineFactory.AllModes)
+        {
+            if (!results.TryGetValue(mode, out var result))
+                continue;
+
+            double pct = bestRpsps > 0 ? result.TournamentsPerSecond / bestRpsps * 100 : 0;
+            var pctColor = pct > 95 ? "green" : pct > 80 ? "yellow" : "red";
+
+            table.AddRow(
+                $"[bold]{mode.ToString().ToLowerInvariant()}[/]",
+                $"[cyan]{result.TotalTournaments:N0}[/]",
+                $"[deepskyblue1]{result.RoundsPerSecond:N0}[/]",
+                $"[{pctColor}]{pct:F1}%[/]"
+            );
+        }
+
+        AnsiConsole.Write(table);
+        AnsiConsole.WriteLine();
+    }
+
     public static void ShowHeader()
     {
         AnsiConsole.WriteLine();
@@ -92,12 +128,15 @@ public static class ResultsDisplay
         AnsiConsole.WriteLine();
     }
 
-    public static void ShowConfiguration(int threads, double duration, int? seed)
+    public static void ShowConfiguration(int threads, double duration, int? seed,
+        GameMode gameMode = GameMode.Classic, ConcurrencyMode concurrencyMode = ConcurrencyMode.Threads)
     {
         AnsiConsole.MarkupLine("[bold fuchsia]:gear: Configuration[/]");
         WriteMetric("cyan", "Threads", threads.ToString());
         WriteMetric("cyan", "Duration", $"{duration}s");
         WriteMetric("cyan", "Seed", seed?.ToString() ?? "random");
+        WriteMetric("cyan", "Game", $"{gameMode.DisplayName()} {gameMode.Emoji()}");
+        WriteMetric("cyan", "Concurrency", concurrencyMode.ToString().ToLowerInvariant());
         AnsiConsole.WriteLine();
     }
 

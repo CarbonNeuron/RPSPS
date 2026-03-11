@@ -1,6 +1,7 @@
 namespace RPSPS.Engine;
 
 using System.Text.Json.Serialization;
+using RPSPS.Models;
 
 public sealed class BenchmarkResult
 {
@@ -13,6 +14,12 @@ public sealed class BenchmarkResult
     public double ActualDurationSeconds { get; set; }
     public int ThreadCount { get; set; }
     public int? Seed { get; set; }
+
+    [JsonConverter(typeof(JsonStringEnumConverter<GameMode>))]
+    public GameMode GameMode { get; set; }
+
+    [JsonConverter(typeof(JsonStringEnumConverter<ConcurrencyMode>))]
+    public ConcurrencyMode ConcurrencyMode { get; set; }
 
     // Memory metrics
     public long PeakWorkingSetBytes { get; set; }
@@ -33,9 +40,17 @@ public sealed class PlayerStats
     public double WinRate => Wins + Losses > 0 ? (double)Wins / (Wins + Losses) : 0;
 }
 
+public sealed class ComparisonResult
+{
+    public Dictionary<string, BenchmarkResult> Results { get; set; } = new();
+}
+
 [JsonSerializable(typeof(BenchmarkResult))]
 [JsonSerializable(typeof(PlayerStats))]
 [JsonSerializable(typeof(Dictionary<string, PlayerStats>))]
+[JsonSerializable(typeof(ComparisonResult))]
+[JsonSerializable(typeof(Dictionary<string, BenchmarkResult>))]
+[JsonSerializable(typeof(BenchmarkResult[]))]
 public partial class BenchmarkResultJsonContext : JsonSerializerContext
 {
 }

@@ -1,6 +1,7 @@
 using System.Text;
 using RPSPS.Display;
 using RPSPS.Engine;
+using RPSPS.Models;
 using RPSPS.Update;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -46,7 +47,7 @@ internal static class EntryPoint
 internal sealed class BenchmarkSettings : CommandSettings
 {
     [CommandOption("-t|--threads")]
-    [Description("Number of threads (0 = all cores)")]
+    [Description("Number of threads/tasks (0 = all cores)")]
     [DefaultValue(1)]
     public int Threads { get; set; }
 
@@ -58,6 +59,20 @@ internal sealed class BenchmarkSettings : CommandSettings
     [CommandOption("-s|--seed")]
     [Description("RNG seed for reproducibility")]
     public int? Seed { get; set; }
+
+    [CommandOption("-g|--game")]
+    [Description("Game variant: classic, spock")]
+    [DefaultValue("classic")]
+    public string Game { get; set; } = "classic";
+
+    [CommandOption("-c|--concurrency")]
+    [Description("Concurrency model: threads, parallel, async, channels")]
+    [DefaultValue("threads")]
+    public string Concurrency { get; set; } = "threads";
+
+    [CommandOption("--compare")]
+    [Description("Run all concurrency modes and show comparison")]
+    public bool Compare { get; set; }
 
     [CommandOption("--no-color")]
     [Description("Disable colored output")]
@@ -71,12 +86,39 @@ internal sealed class BenchmarkSettings : CommandSettings
     [Description("Show per-player stats and match breakdowns")]
     public bool Verbose { get; set; }
 
+    [CommandOption("--nologo")]
+    [Description("Suppress the banner header")]
+    public bool NoLogo { get; set; }
+
+    public GameMode ParsedGameMode => Game.ToLowerInvariant() switch
+    {
+        "spock" => GameMode.Spock,
+        _ => GameMode.Classic
+    };
+
+    public ConcurrencyMode ParsedConcurrencyMode => Concurrency.ToLowerInvariant() switch
+    {
+        "parallel" => ConcurrencyMode.Parallel,
+        "async" => ConcurrencyMode.Async,
+        "channels" => ConcurrencyMode.Channels,
+        _ => ConcurrencyMode.Threads
+    };
+
     public override ValidationResult Validate()
     {
         if (Threads < 0)
             return ValidationResult.Error("Thread count must be 0 or greater");
         if (Duration <= 0)
             return ValidationResult.Error("Duration must be greater than 0");
+
+        var validGames = new[] { "classic", "spock" };
+        if (!validGames.Contains(Game.ToLowerInvariant()))
+            return ValidationResult.Error($"Invalid game mode '{Game}'. Valid options: classic, spock");
+
+        var validConcurrency = new[] { "threads", "parallel", "async", "channels" };
+        if (!validConcurrency.Contains(Concurrency.ToLowerInvariant()))
+            return ValidationResult.Error($"Invalid concurrency mode '{Concurrency}'. Valid options: threads, parallel, async, channels");
+
         return ValidationResult.Success();
     }
 }
@@ -90,14 +132,20 @@ internal sealed class BenchmarkCommand : Command<BenchmarkSettings>
 
         int threads = settings.Threads == 0 ? Environment.ProcessorCount : settings.Threads;
         int actualSeed = settings.Seed ?? Random.Shared.Next();
+        var gameMode = settings.ParsedGameMode;
+        var concurrencyMode = settings.ParsedConcurrencyMode;
+
+        if (settings.Compare)
+            return RunComparison(settings, threads, actualSeed, gameMode, cancellation);
 
         if (!settings.Json)
         {
-            ResultsDisplay.ShowHeader();
-            ResultsDisplay.ShowConfiguration(threads, settings.Duration, actualSeed);
+            if (!settings.NoLogo)
+                ResultsDisplay.ShowHeader();
+            ResultsDisplay.ShowConfiguration(threads, settings.Duration, actualSeed, gameMode, concurrencyMode);
         }
 
-        var engine = new BenchmarkEngine(threads, settings.Duration, actualSeed);
+        var engine = BenchmarkEngineFactory.Create(concurrencyMode, threads, settings.Duration, actualSeed, gameMode);
 
         BenchmarkResult result;
 
@@ -141,6 +189,77 @@ internal sealed class BenchmarkCommand : Command<BenchmarkSettings>
             AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine("[bold yellow]Cancelled[/]");
             return 1;
+        }
+
+        return 0;
+    }
+
+    private static int RunComparison(BenchmarkSettings settings, int threads, int seed, GameMode gameMode, CancellationToken cancellation)
+    {
+        var results = new Dictionary<ConcurrencyMode, BenchmarkResult>();
+
+        if (!settings.Json)
+        {
+            if (!settings.NoLogo)
+                ResultsDisplay.ShowHeader();
+            AnsiConsole.MarkupLine($"[bold fuchsia]:bar_chart: Running comparison ({threads} threads, {gameMode.DisplayName().ToLowerInvariant()}, {settings.Duration}s each)[/]");
+            AnsiConsole.WriteLine();
+        }
+
+        try
+        {
+            foreach (var mode in BenchmarkEngineFactory.AllModes)
+            {
+                if (!settings.Json)
+                {
+                    var result = AnsiConsole.Progress()
+                        .AutoRefresh(true)
+                        .HideCompleted(false)
+                        .Columns(
+                            new TaskDescriptionColumn(),
+                            new ProgressBarColumn(),
+                            new PercentageColumn(),
+                            new ElapsedTimeColumn(),
+                            new SpinnerColumn())
+                        .Start(ctx =>
+                        {
+                            var task = ctx.AddTask($"[cyan]{mode.ToString().ToLowerInvariant()}[/]", maxValue: settings.Duration);
+                            var engine = BenchmarkEngineFactory.Create(mode, threads, settings.Duration, seed, gameMode);
+
+                            var benchResult = engine.Run((elapsed, total) =>
+                            {
+                                task.Value = Math.Min(elapsed, total);
+                            }, cancellation);
+
+                            task.Value = settings.Duration;
+                            return benchResult;
+                        });
+
+                    results[mode] = result;
+                }
+                else
+                {
+                    var engine = BenchmarkEngineFactory.Create(mode, threads, settings.Duration, seed, gameMode);
+                    results[mode] = engine.Run(cancellationToken: cancellation);
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine("[bold yellow]Cancelled[/]");
+            return 1;
+        }
+
+        if (settings.Json)
+        {
+            var jsonResults = results.Values.ToArray();
+            var jsonStr = JsonSerializer.Serialize(jsonResults, BenchmarkResultJsonContext.Default.BenchmarkResultArray);
+            Console.WriteLine(jsonStr);
+        }
+        else
+        {
+            ResultsDisplay.ShowComparisonResults(results, threads, gameMode, settings.Duration);
         }
 
         return 0;

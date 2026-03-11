@@ -10,26 +10,28 @@ public class PlayerBenchmarks
     [Params(0, 10, 100, 1000)]
     public int HistorySize { get; set; }
 
+    [Params("classic", "spock")]
+    public string GameModeName { get; set; } = "classic";
+
     private RandomPlayer _randomPlayer = null!;
     private PatternPlayer _patternPlayer = null!;
     private FrequencyPlayer _frequencyPlayer = null!;
     private MarkovPlayer _markovPlayer = null!;
-    private List<Move> _history = null!;
 
     [GlobalSetup]
     public void Setup()
     {
-        _randomPlayer = new RandomPlayer(42);
-        _patternPlayer = new PatternPlayer(42);
-        _frequencyPlayer = new FrequencyPlayer(42);
-        _markovPlayer = new MarkovPlayer(42);
+        int moveCount = GameModeName == "spock" ? 5 : 3;
 
-        _history = new List<Move>(HistorySize);
+        _randomPlayer = new RandomPlayer(42, moveCount);
+        _patternPlayer = new PatternPlayer(42, moveCount);
+        _frequencyPlayer = new FrequencyPlayer(42, moveCount);
+        _markovPlayer = new MarkovPlayer(42, moveCount);
+
         var rng = new Random(42);
         for (int i = 0; i < HistorySize; i++)
         {
-            var move = (Move)rng.Next(3);
-            _history.Add(move);
+            var move = (Move)rng.Next(moveCount);
             _randomPlayer.RecordOpponentMove(move);
             _patternPlayer.RecordOpponentMove(move);
             _frequencyPlayer.RecordOpponentMove(move);

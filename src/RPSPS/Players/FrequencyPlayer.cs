@@ -4,37 +4,38 @@ using RPSPS.Models;
 
 public sealed class FrequencyPlayer : Player
 {
-    // Flat array instead of Dictionary<Move, int>
-    private readonly int[] _frequency = new int[3];
+    private readonly int[] _frequency;
     private readonly Random _rng;
+    private readonly int _moveCount;
 
     public override string Name => "FrequencyPlayer";
 
-    public FrequencyPlayer(int seed)
+    public FrequencyPlayer(int seed, int moveCount = 3)
     {
+        _moveCount = moveCount;
+        _frequency = new int[moveCount];
         _rng = new Random(seed);
     }
 
     public override Move ChooseMove()
     {
         if (OpponentHistoryCount == 0)
-            return (Move)_rng.Next(3);
+            return (Move)_rng.Next(_moveCount);
 
         // Find the most frequent move
         int bestIdx = 0;
         int bestCount = _frequency[0];
 
-        if (_frequency[1] > bestCount)
+        for (int i = 1; i < _moveCount; i++)
         {
-            bestIdx = 1;
-            bestCount = _frequency[1];
-        }
-        if (_frequency[2] > bestCount)
-        {
-            bestIdx = 2;
+            if (_frequency[i] > bestCount)
+            {
+                bestIdx = i;
+                bestCount = _frequency[i];
+            }
         }
 
-        return ((Move)bestIdx).GetCounter();
+        return _moveCount > 3 ? ((Move)bestIdx).GetCounter(_rng) : ((Move)bestIdx).GetCounter();
     }
 
     protected override void OnOpponentMove(Move move)
@@ -45,8 +46,6 @@ public sealed class FrequencyPlayer : Player
     public override void Reset()
     {
         base.Reset();
-        _frequency[0] = 0;
-        _frequency[1] = 0;
-        _frequency[2] = 0;
+        Array.Clear(_frequency);
     }
 }

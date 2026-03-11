@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -18,11 +20,25 @@ jobs:
           dotnet-version: '10.0.x'
           dotnet-quality: 'preview'
 
+      - name: Determine version
+        id: version
+        run: |
+          # Use the latest tag if available, otherwise fallback
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          VERSION="${TAG#v}"
+          COMMITS=$(git rev-list "${TAG}..HEAD" --count 2>/dev/null || echo "0")
+          if [ "$COMMITS" -gt "0" ]; then
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            VERSION="${VERSION}-ci.${COMMITS}+${SHORT_SHA}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Version: ${VERSION}"
+
       - name: Restore
         run: dotnet restore
 
       - name: Build
-        run: dotnet build -c Release --no-restore
+        run: dotnet build -c Release --no-restore -p:Version=${{ steps.version.outputs.version }}
 
       - name: Test
         run: dotnet test -c Release --no-build --verbosity normal

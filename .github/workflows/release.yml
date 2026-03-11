@@ -35,6 +35,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Determine version from tag
+        id: version
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Version: ${VERSION}"
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -42,7 +50,7 @@ jobs:
           dotnet-quality: 'preview'
 
       - name: Publish AOT
-        run: dotnet publish src/RPSPS -c Release -r ${{ matrix.rid }}
+        run: dotnet publish src/RPSPS -c Release -r ${{ matrix.rid }} -p:Version=${{ steps.version.outputs.version }}
 
       - name: Package (Unix)
         if: runner.os != 'Windows'
