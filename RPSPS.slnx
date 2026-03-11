@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RPSPS/RPSPS.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RPSPS.Tests/RPSPS.Tests.csproj" />
+  </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/RPSPS.Benchmarks/RPSPS.Benchmarks.csproj" />
+  </Folder>
+</Solution>
